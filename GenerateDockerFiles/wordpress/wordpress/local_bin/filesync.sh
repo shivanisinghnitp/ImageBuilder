@@ -30,9 +30,9 @@ do
 
 	# start unison for continuous filesync
 	if [ $(grep "INITIAL_FILESYNC_COMPLETED" $FILESYNC_STATUS_FILE_PATH) ] && [ ! $(grep "UNISON_PROCESS_STARTED" $FILESYNC_STATUS_FILE_PATH) ] \
-	&& supervisorctl start unison
-	&& supervisorctl start perms-service
-	&& supervisorctl start inotifywait-perms-service
+	&& supervisorctl start unison \
+	&& supervisorctl start perms-service \
+	&& supervisorctl start inotifywait-perms-service \
 	&& supervisorctl start unison-cleanup-service; then
 		echo "UNISON_PROCESS_STARTED" >> $FILESYNC_STATUS_FILE_PATH
 	fi
