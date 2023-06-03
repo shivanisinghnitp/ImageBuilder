@@ -3,9 +3,9 @@
 test ! -d $FILESYNC_STATUS_FILE_DIR && mkdir -p $FILESYNC_STATUS_FILE_DIR
 touch $FILESYNC_STATUS_FILE_PATH
 
-trycount=0
+trycount=1
 
-while [ $trycount -le 20 ]
+while [ $trycount -le 3 ]
 do
 	#initial copy from /home/site/wwwroot to /var/www/wordpress
 	if [ ! $(grep "RSYNC_COMPLETED" $FILESYNC_STATUS_FILE_PATH) ] \
@@ -32,10 +32,19 @@ do
 	if [ $(grep "INITIAL_FILESYNC_COMPLETED" $FILESYNC_STATUS_FILE_PATH) ] && [ ! $(grep "UNISON_PROCESS_STARTED" $FILESYNC_STATUS_FILE_PATH) ] \
 	&& supervisorctl start unison
 	&& supervisorctl start perms-service
-	&& supervisorctl start inotifywait-perms-service; then
+	&& supervisorctl start inotifywait-perms-service
+	&& supervisorctl start unison-cleanup-service; then
 		echo "UNISON_PROCESS_STARTED" >> $FILESYNC_STATUS_FILE_PATH
-		break
 	fi
-	
+
+	if [ $(grep "UNISON_PROCESS_STARTED" $FILESYNC_STATUS_FILE_PATH) ] && [ ! $(grep "NGINX_CONFIG_UPDATED" $FILESYNC_STATUS_FILE_PATH) ]; then
+		sleep 180 	# wait 3min for unison to sync fileserver and local storage before reloading nginx
+		if sed -i "s#${WORDPRESS_HOME}#${HOME_SITE_LOCAL_STG}#g" /etc/nginx/conf.d/default.conf \
+			&& /usr/sbin/nginx -s reload; then
+			echo "NGINX_CONFIG_UPDATED" >> $FILESYNC_STATUS_FILE_PATH
+			break
+		fi
+	fi
+
 	trycount=$(($trycount+1))
 done
