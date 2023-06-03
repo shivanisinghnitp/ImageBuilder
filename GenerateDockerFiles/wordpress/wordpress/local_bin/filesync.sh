@@ -8,9 +8,12 @@ trycount=1
 while [ $trycount -le 3 ]
 do
 	#initial copy from /home/site/wwwroot to /var/www/wordpress
-	if [ ! $(grep "RSYNC_COMPLETED" $FILESYNC_STATUS_FILE_PATH) ] \
-	&& rsync -a $WORDPRESS_HOME/ $HOME_SITE_LOCAL_STG/ --exclude $UNISON_EXCLUDED_PATH ; then
-		echo "RSYNC_COMPLETED" >> $FILESYNC_STATUS_FILE_PATH
+	if [ ! $(grep "RSYNC_COMPLETED" $FILESYNC_STATUS_FILE_PATH) ]; then
+		rsync -a $WORDPRESS_HOME/ $HOME_SITE_LOCAL_STG/ --exclude $UNISON_EXCLUDED_PATH
+		exit_code=$?
+		if [ $exit_code -eq 0 ] || [ $exit_code -eq 24 ]; then
+			echo "RSYNC_COMPLETED" >> $FILESYNC_STATUS_FILE_PATH
+		fi
 	fi
 	
 	#run synchronous unison command that generates checksums for faster asynchronous unison filesync 
