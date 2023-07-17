@@ -6,7 +6,9 @@ php -v
 
 # if defined, assume the container is running on Azure
 AZURE_DETECTED=$WEBSITES_ENABLE_APP_SERVICE_STORAGE
-
+if [[ $AFD_CUSTOM_DOMAIN ]] && [[ $AFD_ENABLED ]] && [[ "$AFD_ENABLED" == "true" || "$AFD_ENABLED" == "TRUE" || "$AFD_ENABLED" == "True" ]]; then
+    CUSTOM_DOMAIN=$AFD_CUSTOM_DOMAIN
+fi
 
 update_php_config() {
 	local CONFIG_FILE="${1}"
@@ -366,46 +368,56 @@ if [[ $MIGRATION_IN_PROGRESS ]] && [[ "$MIGRATION_IN_PROGRESS" == "true" || "$MI
 fi
 
 afd_update_site_url() {
-    if [ $(grep "BLOB_AFD_CONFIGURATION_COMPLETE" $WORDPRESS_LOCK_FILE) ] || [ $(grep "AFD_CONFIGURATION_COMPLETE" $WORDPRESS_LOCK_FILE) ]; then
-        afd_url="\$http_protocol . \$_SERVER['HTTP_HOST']"
-        if [[ $AFD_ENABLED ]] && [[ "$AFD_ENABLED" == "true" || "$AFD_ENABLED" == "TRUE" || "$AFD_ENABLED" == "True" ]]; then
-            if [[ $AFD_CUSTOM_DOMAIN ]]; then
-                afd_url="\$http_protocol . '$AFD_CUSTOM_DOMAIN'"
-            elif [[ $AFD_ENDPOINT ]]; then
-                afd_url="\$http_protocol . '$AFD_ENDPOINT'"
+    if [[ $AFD_ENABLED ]] && [[ "$AFD_ENABLED" == "true" || "$AFD_ENABLED" == "TRUE" || "$AFD_ENABLED" == "True" ]]; then
+        AFD_DOMAIN=$WEBSITE_HOSTNAME
+        if [[ $CUSTOM_DOMAIN ]]; then
+            AFD_DOMAIN=$CUSTOM_DOMAIN
+        elif [[ $AFD_ENDPOINT ]]; then
+            AFD_DOMAIN=$AFD_ENDPOINT
+        fi
+
+        if [ $(grep "BLOB_AFD_CONFIGURATION_COMPLETE" $WORDPRESS_LOCK_FILE) ] || [ $(grep "AFD_CONFIGURATION_COMPLETE" $WORDPRESS_LOCK_FILE) ]; then
+            wp config set WP_HOME "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root
+            wp config set WP_SITEURL "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root
+            wp option update SITEURL "https://$AFD_DOMAIN" --path=$WORDPRESS_HOME --allow-root
+            wp option update HOME "https://$AFD_DOMAIN" --path=$WORDPRESS_HOME --allow-root
+
+            if [ -e "$WORDPRESS_HOME/wp-config.php" ]; then
+                AFD_CONFIG_DETECTED=$(grep "^\s*\$_SERVER\['HTTP_HOST'\]\s*=\s*getenv('AFD_DOMAIN');" $WORDPRESS_HOME/wp-config.php)
+                if [ -z "$AFD_CONFIG_DETECTED" ]; then
+
+                    SEARCH_STR_I="Using environment variables for memory limits"
+                    if [ ! -z "$(grep "${SEARCH_STR_I}" $WORDPRESS_HOME/wp-config.php)" ]; then
+                        sed -i "/${SEARCH_STR_I}/e cat $WORDPRESS_SOURCE/afd-header-settings.txt" $WORDPRESS_HOME/wp-config.php
+                    else
+                        SEARCH_STR_II="Using environment variables for DB connection information"
+                        if [ ! -z "$(grep "${SEARCH_STR_II}" $WORDPRESS_HOME/wp-config.php)" ]; then
+                            sed -i "/${SEARCH_STR_II}/e cat $WORDPRESS_SOURCE/afd-header-settings.txt" $WORDPRESS_HOME/wp-config.php
+                        fi
+                    fi
+                fi
             fi
         fi
-        wp config set WP_HOME "$afd_url" --raw --path=$WORDPRESS_HOME --allow-root
-        wp config set WP_SITEURL "$afd_url" --raw --path=$WORDPRESS_HOME --allow-root
+
+        if [[ "$AFD_DOMAIN" == "$WEBSITE_HOSTNAME" ]]; then
+            AFD_DOMAIN=''
+        fi
     fi
 }
 
 # Update AFD URL
 afd_update_site_url
 
-if [ -e "$WORDPRESS_HOME/wp-config.php" ]; then
-    echo "INFO: Check SSL Setting..."    
-    SSL_DETECTED=$(grep "\$_SERVER\['HTTPS'\] = 'on';" $WORDPRESS_HOME/wp-config.php)
-    if [ ! SSL_DETECTED ];then
-        echo "INFO: Add SSL Setting..."
-        sed -i "/stop editing!/r $WORDPRESS_SOURCE/ssl-settings.txt" $WORDPRESS_HOME/wp-config.php        
-    else        
-        echo "INFO: SSL Settings exist!"
-    fi
-fi
 
 # Multi-site conversion
 if [[ $(grep "WP_INSTALLATION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ ! $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] \
     && [[ $WORDPRESS_MULTISITE_CONVERT ]] && [[ "$WORDPRESS_MULTISITE_CONVERT" == "true" || "$WORDPRESS_MULTISITE_CONVERT" == "TRUE" || "$WORDPRESS_MULTISITE_CONVERT" == "True" ]] \
-    && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" || "$WORDPRESS_MULTISITE_TYPE" == "Subdirectory" || "$WORDPRESS_MULTISITE_TYPE" == "SUBDIRECTORY" ]]; then
+    && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" || "$WORDPRESS_MULTISITE_TYPE" == "subdomain" ]] \
+    && [[ ! "$(wp config get MULTISITE --path=$WORDPRESS_HOME --allow-root 2> /dev/null)" ]]; then
 
-    # There is an issue with AFD where $_SERVER['HTTP_HOST'] header is still pointing to <sitename>.azurewebsites.net instead of AFD endpoint.
-    # This is causing database connection issue with multi-site WordPress because the main site domain (AFD endpoint) doesn't match the one in HTTP_HOST header.
-    if [ $(grep "BLOB_AFD_CONFIGURATION_COMPLETE" $WORDPRESS_LOCK_FILE) ] || [ $(grep "AFD_CONFIGURATION_COMPLETE" $WORDPRESS_LOCK_FILE) ]; then
-        if [[ $AFD_ENABLED ]] && [[ "$AFD_ENABLED" == "true" || "$AFD_ENABLED" == "TRUE" || "$AFD_ENABLED" == "True" ]]; then
-            wp config set WP_HOME "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root
-            wp config set WP_SITEURL "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root
-        fi
+    IS_AFD_ENABLED="False"
+    if [[ $AFD_ENABLED ]] && [[ "$AFD_ENABLED" == "true" || "$AFD_ENABLED" == "TRUE" || "$AFD_ENABLED" == "True" ]]; then
+    	IS_AFD_ENABLED="True"
     fi
 
     IS_W3TC_ENABLED="False"
@@ -418,13 +430,36 @@ if [[ $(grep "WP_INSTALLATION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ ! $(grep
         IS_SMUSHIT_ENABLED="True"
     fi
 
-    if wp plugin deactivate --all --path=$WORDPRESS_HOME --allow-root \
-    && wp core multisite-convert --url=$WEBSITE_HOSTNAME --path=$WORDPRESS_HOME --allow-root; then
+    ADD_SUBDOMAIN_FLAG=''
+    MULTISITE_DOMAIN=$WEBSITE_HOSTNAME
 
-        # Removing duplicate occurance of DOMAIN_CURRENT_SITE
-        wp config delete DOMAIN_CURRENT_SITE --path=$WORDPRESS_HOME --allow-root 2> /dev/null;
-        wp config set DOMAIN_CURRENT_SITE \$_SERVER[\'HTTP_HOST\'] --raw --path=$WORDPRESS_HOME --allow-root 2> /dev/null;
-        echo "MULTISITE_CONVERSION_COMPLETED" >> $WORDPRESS_LOCK_FILE
+    if [[ $CUSTOM_DOMAIN ]]; then
+        MULTISITE_DOMAIN=$CUSTOM_DOMAIN
+        if [[ "$WORDPRESS_MULTISITE_TYPE" == "subdomain" ]]; then
+            ADD_SUBDOMAIN_FLAG='true'
+        fi
+    elif [[ "$IS_AFD_ENABLED" == "True" ]] && [[ $AFD_ENDPOINT ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" ]]; then
+        MULTISITE_DOMAIN=$AFD_ENDPOINT
+    fi
+
+    if [[ "$WORDPRESS_MULTISITE_TYPE" == "subdomain" && "$MULTISITE_DOMAIN" != "$WEBSITE_HOSTNAME" ]] \
+        || [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" ]]; then
+
+        wp config set WP_HOME "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root
+        wp config set WP_SITEURL "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root
+
+        if wp plugin deactivate --all --path=$WORDPRESS_HOME --allow-root \
+        && wp core multisite-convert ${ADD_SUBDOMAIN_FLAG:+--subdomains} --url=$MULTISITE_DOMAIN --path=$WORDPRESS_HOME --allow-root; then
+
+            # Removing duplicate occurance of DOMAIN_CURRENT_SITE
+            wp config delete DOMAIN_CURRENT_SITE --path=$WORDPRESS_HOME --allow-root 2> /dev/null;
+            wp config set DOMAIN_CURRENT_SITE "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root 2> /dev/null;
+            wp config set WP_HOME "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root 2> /dev/null;
+            wp config set WP_SITEURL "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root 2> /dev/null;
+            wp option update SITEURL "https://$MULTISITE_DOMAIN" --path=$WORDPRESS_HOME --allow-root 2> /dev/null;
+            wp option update HOME "https://$MULTISITE_DOMAIN" --path=$WORDPRESS_HOME --allow-root 2> /dev/null;
+            echo "MULTISITE_CONVERSION_COMPLETED" >> $WORDPRESS_LOCK_FILE
+        fi
     fi
 
     #Re-activate W3TC & SmushIt plugins
@@ -440,17 +475,6 @@ if [[ $(grep "WP_INSTALLATION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ ! $(grep
     afd_update_site_url
 fi
 
-# set permalink as 'Day and Name' and default, it has best performance with nginx re_write config.
-# PERMALINK_DETECTED=$(grep "\$wp_rewrite->set_permalink_structure" $WORDPRESS_HOME/wp-settings.php)
-# if [ ! $PERMALINK_DETECTED ];then
-#     echo "INFO: Set Permalink..."
-#     init_string="do_action( 'init' );"
-#     sed -i "/$init_string/r $WORDPRESS_SOURCE/permalink-settings.txt" $WORDPRESS_HOME/wp-settings.php
-#     init_row=$(grep "$init_string" -n $WORDPRESS_HOME/wp-settings.php | head -n 1 | cut -d ":" -f1)
-#     sed -i "${init_row}d" $WORDPRESS_HOME/wp-settings.php
-# else
-#     echo "INFO: Permalink setting is exist!"
-# fi
 
 # setup server root
 if [ ! $AZURE_DETECTED ]; then 

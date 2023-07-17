@@ -38,6 +38,7 @@ ENV WORDPRESS_SOURCE "/usr/src/wordpress"
 ENV WORDPRESS_HOME "/home/site/wwwroot"
 ENV WORDPRESS_LOCK_HOME "/home/wp-locks"
 ENV WORDPRESS_LOCK_FILE $WORDPRESS_LOCK_HOME"/wp_deployment_status.txt"
+ENV AFD_DOMAIN=
 # Unison
 ENV UNISON "/usr/local/unison"
 ENV UNISON_LOG_DIR "/var/log/unison"
@@ -115,6 +116,7 @@ RUN set -ex \
 	&& docker-php-source delete \
 	&& mkdir -p /usr/local/php/tmp \
 	&& chmod 777 /usr/local/php/tmp \
+	&& apk add --no-cache sed \
 # ------
 # ssh
 # ------
