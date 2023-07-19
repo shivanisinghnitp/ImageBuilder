@@ -76,7 +76,7 @@ function buildDockerImage()
                     fi
 
                     local TAG_MOD="${TAG}_${PIPELINE_BUILD_NUMBER}"
-                    if [[ $STACK = "wordpress" && ( $TAG = "latest"  ||  $TAG = "latest_7.4" ||  $TAG = "test" ||  $TAG = "8.0_stable" ) ]]; then
+                    if [[ $STACK = "wordpress" && ( $TAG = "latest"  ||  $TAG = "latest_7.4" ||  $TAG = "test" ||  $TAG = "8.0_stable" ||  ||  $TAG = "8.2_test") ]]; then
                         TAG_MOD="${TAG}"
                     fi
 
