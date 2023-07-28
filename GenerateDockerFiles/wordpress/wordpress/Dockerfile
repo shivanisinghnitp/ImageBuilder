@@ -1,4 +1,4 @@
-FROM BASE_IMAGE_NAME_PLACEHOLDER
+FROM php:8.2.7-fpm-alpine3.17
 LABEL maintainer Azure App Service Container Images <appsvc-images@microsoft.com>
 # ========
 # ENV vars

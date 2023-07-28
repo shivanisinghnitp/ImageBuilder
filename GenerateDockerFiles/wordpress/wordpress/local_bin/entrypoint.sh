@@ -230,7 +230,7 @@ setup_wordpress() {
     fi
 
     if [ $(grep "SMUSH_PLUGIN_INSTALLED" $WORDPRESS_LOCK_FILE) ] && [ ! $(grep "SMUSH_PLUGIN_CONFIG_UPDATED" $WORDPRESS_LOCK_FILE) ]; then
-        if wp option set skip-smush-setup 1 --path=$WORDPRESS_HOME --allow-root \
+    if wp option set skip-smush-setup 1 --path=$WORDPRESS_HOME --allow-root \
         && wp option patch update wp-smush-settings auto 1 --path=$WORDPRESS_HOME --allow-root \
         && wp option patch update wp-smush-settings lossy 0 --path=$WORDPRESS_HOME --allow-root \
         && wp option patch update wp-smush-settings strip_exif 1 --path=$WORDPRESS_HOME --allow-root \
@@ -254,6 +254,21 @@ setup_wordpress() {
             fi
         fi
     fi
+
+     if [ $(grep "WP_INSTALLATION_COMPLETED" $WORDPRESS_LOCK_FILE) ] && [ ! $(grep "W3TC_PLUGIN_INSTALLED" $WORDPRESS_LOCK_FILE) ]; then
+        #backward compatibility for previous versions that don't have plugin source code in wordpress repo.
+        if [ $(grep "GIT_PULL_COMPLETED" $WORDPRESS_LOCK_FILE) ]; then
+            if wp plugin install app_service_email --force --activate --path=$WORDPRESS_HOME --allow-root; then
+                echo "EMAIL_PLUGIN_INSTALLED" >> $WORDPRESS_LOCK_FILE
+            fi
+        else
+            if wp plugin deactivate app_service_email --quiet --path=$WORDPRESS_HOME --allow-root \
+            && wp plugin activate app_service_email --path=$WORDPRESS_HOME --allow-root; then
+                echo "EMAIL_PLUGIN_INSTALLED" >> $WORDPRESS_LOCK_FILE
+            fi
+        fi
+    fi
+
 
     if [ $(grep "W3TC_PLUGIN_INSTALLED" $WORDPRESS_LOCK_FILE) ] && [ ! $(grep "W3TC_PLUGIN_CONFIG_UPDATED" $WORDPRESS_LOCK_FILE) ]; then
         if mkdir -p $WORDPRESS_HOME/wp-content/cache/tmp \
