@@ -48,7 +48,7 @@ class Generic_AdminActions_Default {
 	 *
 	 * @return void
 	 */
-	function w3tc_default_save_licence_key() {
+	function w3tc_default_save_license_key() {
 		$license = Util_Request::get_string( 'license_key' );
 		try {
 			$old_config = new Config();
@@ -270,6 +270,37 @@ class Generic_AdminActions_Default {
 
 				$config->set( 'pgcache.enabled', false );
 				$data['response_errors'][] = 'fancy_permalinks_disabled_pgcache';
+			}
+		}
+
+		/**
+		 * Page Cache tab
+		 */
+		if ( 'w3tc_pgcache' === $this->_page ) {
+			// Textarea settings.
+			$settings = array(
+				'pgcache.mirrors.home_urls',
+				'pgcache.purge.pages',
+				'pgcache.accept.qs',
+				'pgcache.reject.ua',
+				'pgcache.reject.cookie',
+				'pgcache.reject.uri',
+				'pgcache.reject.categories',
+				'pgcache.reject.tags',
+				'pgcache.reject.authors',
+				'pgcache.reject.custom',
+				'pgcache.accept.files',
+				'pgcache.accept.uri',
+				'pgcache.cache.headers',
+			);
+			// Remove empty lines, trim values, and sort.
+			foreach ( $settings as $setting ) {
+				$setting_array = $config->get_array( $setting );
+				if ( ! empty( $setting_array ) && is_array( $setting_array ) ) {
+					$values = array_filter( array_map( 'trim', $setting_array ), 'strlen' );
+					sort( $values );
+					$config->set( $setting, $values );
+				}
 			}
 		}
 

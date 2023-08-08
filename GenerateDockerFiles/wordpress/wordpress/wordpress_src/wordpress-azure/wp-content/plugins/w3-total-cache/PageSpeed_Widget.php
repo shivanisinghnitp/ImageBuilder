@@ -40,7 +40,7 @@ class PageSpeed_Widget {
 	public static function admin_print_scripts_w3tc_pagespeed_widget() {
 		wp_register_script(
 			'w3tc-widget-pagespeed',
-			plugins_url( 'PageSpeed_Widget_View.js', W3TC_FILE ),
+			esc_url( plugins_url( 'PageSpeed_Widget_View.js', W3TC_FILE ) ),
 			array(),
 			W3TC_VERSION,
 			'true'
@@ -58,7 +58,7 @@ class PageSpeed_Widget {
 
 		wp_enqueue_style(
 			'w3tc-widget-pagespeed',
-			plugins_url( 'PageSpeed_Widget_View.css', W3TC_FILE ),
+			esc_url( plugins_url( 'PageSpeed_Widget_View.css', W3TC_FILE ) ),
 			array(),
 			W3TC_VERSION
 		);
@@ -174,7 +174,7 @@ class PageSpeed_Widget {
 			} else {
 				$api_response['time']         = time();
 				$api_response['display_time'] = \current_time( 'M jS, Y g:ia', false );
-				update_option( 'w3tc_pagespeed_data_' . $home_url, wp_json_encode( $api_response ), Util_PageSpeed::get_cache_life() );
+				update_option( 'w3tc_pagespeed_data_' . $home_url, wp_json_encode( $api_response ), 'yes' );
 			}
 		}
 
