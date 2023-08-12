@@ -376,19 +376,19 @@ fi
 
 afd_update_site_url() {
     if [[ $AFD_ENABLED ]] && [[ "$AFD_ENABLED" == "true" || "$AFD_ENABLED" == "TRUE" || "$AFD_ENABLED" == "True" ]]; then
-        AFD_DOMAIN=$WEBSITE_HOSTNAME
+        FINAL_AFD_DOMAIN=$WEBSITE_HOSTNAME
         if [[ $CUSTOM_DOMAIN ]]; then
-            AFD_DOMAIN=$CUSTOM_DOMAIN
+            FINAL_AFD_DOMAIN=$CUSTOM_DOMAIN
         elif [[ $AFD_ENDPOINT ]]; then
-            AFD_DOMAIN=$AFD_ENDPOINT
+            FINAL_AFD_DOMAIN=$AFD_ENDPOINT
         fi
 
         if [ $(grep "BLOB_AFD_CONFIGURATION_COMPLETE" $WORDPRESS_LOCK_FILE) ] || [ $(grep "AFD_CONFIGURATION_COMPLETE" $WORDPRESS_LOCK_FILE) ] \
             || [ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]; then
             wp config set WP_HOME "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root
             wp config set WP_SITEURL "\$http_protocol . \$_SERVER['HTTP_HOST']" --raw --path=$WORDPRESS_HOME --allow-root
-            wp option update SITEURL "https://$AFD_DOMAIN" --path=$WORDPRESS_HOME --allow-root
-            wp option update HOME "https://$AFD_DOMAIN" --path=$WORDPRESS_HOME --allow-root
+            wp option update SITEURL "https://$FINAL_AFD_DOMAIN" --path=$WORDPRESS_HOME --allow-root
+            wp option update HOME "https://$FINAL_AFD_DOMAIN" --path=$WORDPRESS_HOME --allow-root
 
             if [ -e "$WORDPRESS_HOME/wp-config.php" ]; then
                 AFD_CONFIG_DETECTED=$(grep "^\s*\$_SERVER\['HTTP_HOST'\]\s*=\s*\$_SERVER\['HTTP_X_FORWARDED_HOST'\];" $WORDPRESS_HOME/wp-config.php)
@@ -407,8 +407,8 @@ afd_update_site_url() {
             fi
         fi
 
-        if [[ "$AFD_DOMAIN" == "$WEBSITE_HOSTNAME" ]]; then
-            AFD_DOMAIN=''
+        if [[ "$FINAL_AFD_DOMAIN" == "$WEBSITE_HOSTNAME" ]]; then
+            FINAL_AFD_DOMAIN=''
         fi
     fi
 }
@@ -560,17 +560,24 @@ fi
 export UNISON_EXCLUDED_PATH
 
 
+IS_AFD_ENABLED="False"
+if [[ $AFD_ENABLED ]] && [[ "$AFD_ENABLED" == "true" || "$AFD_ENABLED" == "TRUE" || "$AFD_ENABLED" == "True" ]]; then
+    IS_AFD_ENABLED="True"
+fi
+
 if [[ $SETUP_PHPMYADMIN ]] && [[ "$SETUP_PHPMYADMIN" == "true" || "$SETUP_PHPMYADMIN" == "TRUE" || "$SETUP_PHPMYADMIN" == "True" ]]; then
-    if [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] \
-    && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" || "$WORDPRESS_MULTISITE_TYPE" == "Subdirectory" || "$WORDPRESS_MULTISITE_TYPE" == "SUBDIRECTORY" ]]; then
-        cp /usr/src/nginx/wordpress-multisite-phpmyadmin-server.conf /etc/nginx/conf.d/default.conf
+    if [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" ]]; then
+        cp /usr/src/nginx/wordpress-subdirectory-multisite-phpmyadmin-server.conf /etc/nginx/conf.d/default.conf
+    elif [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdomain" ]] && [[ "$IS_AFD_ENABLED" == "True" ]]; then
+        cp /usr/src/nginx/wordpress-subdomain-afd-multisite-phpmyadmin-server.conf /etc/nginx/conf.d/default.conf
     else
         cp /usr/src/nginx/wordpress-phpmyadmin-server.conf /etc/nginx/conf.d/default.conf
     fi
 else
-    if [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] \
-    && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" || "$WORDPRESS_MULTISITE_TYPE" == "Subdirectory" || "$WORDPRESS_MULTISITE_TYPE" == "SUBDIRECTORY" ]]; then
-        cp /usr/src/nginx/wordpress-multisite-server.conf /etc/nginx/conf.d/default.conf
+    if [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" ]]; then
+        cp /usr/src/nginx/wordpress-subdirectory-multisite-server.conf /etc/nginx/conf.d/default.conf
+    elif [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdomain" ]] && [[ "$IS_AFD_ENABLED" == "True" ]]; then
+        cp /usr/src/nginx/wordpress-subdomain-afd-multisite-server.conf /etc/nginx/conf.d/default.conf
     else
         cp /usr/src/nginx/wordpress-server.conf /etc/nginx/conf.d/default.conf
     fi
