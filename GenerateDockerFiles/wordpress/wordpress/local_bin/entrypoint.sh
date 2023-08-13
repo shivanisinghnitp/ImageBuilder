@@ -568,7 +568,7 @@ fi
 if [[ $SETUP_PHPMYADMIN ]] && [[ "$SETUP_PHPMYADMIN" == "true" || "$SETUP_PHPMYADMIN" == "TRUE" || "$SETUP_PHPMYADMIN" == "True" ]]; then
     if [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" ]]; then
         cp /usr/src/nginx/wordpress-subdirectory-multisite-phpmyadmin-server.conf /etc/nginx/conf.d/default.conf
-    elif [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdomain" ]] && [[ "$IS_AFD_ENABLED" == "True" ]]; then
+    elif [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdomain" ]] && [[ "$IS_AFD_ENABLED" == "True" ]] && [[ $CUSTOM_DOMAIN ]]; then
         cp /usr/src/nginx/wordpress-subdomain-afd-multisite-phpmyadmin-server.conf /etc/nginx/conf.d/default.conf
     else
         cp /usr/src/nginx/wordpress-phpmyadmin-server.conf /etc/nginx/conf.d/default.conf
@@ -576,7 +576,7 @@ if [[ $SETUP_PHPMYADMIN ]] && [[ "$SETUP_PHPMYADMIN" == "true" || "$SETUP_PHPMYA
 else
     if [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdirectory" ]]; then
         cp /usr/src/nginx/wordpress-subdirectory-multisite-server.conf /etc/nginx/conf.d/default.conf
-    elif [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdomain" ]] && [[ "$IS_AFD_ENABLED" == "True" ]]; then
+    elif [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdomain" ]] && [[ "$IS_AFD_ENABLED" == "True" ]] && [[ $CUSTOM_DOMAIN ]]; then
         cp /usr/src/nginx/wordpress-subdomain-afd-multisite-server.conf /etc/nginx/conf.d/default.conf
     else
         cp /usr/src/nginx/wordpress-server.conf /etc/nginx/conf.d/default.conf
