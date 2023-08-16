@@ -14,16 +14,25 @@ afd_update_site_url() {
         wp option update HOME "https://$AFD_DOMAIN" --path=$WORDPRESS_HOME --allow-root
 
         if [ -e "$WORDPRESS_HOME/wp-config.php" ]; then
-            AFD_CONFIG_DETECTED=$(grep "^\s*\$_SERVER\['HTTP_HOST'\]\s*=\s*getenv('AFD_DOMAIN');" $WORDPRESS_HOME/wp-config.php)
-            if [ -z "$AFD_CONFIG_DETECTED" ]; then
+            AFD_HEADER_FILE='afd-header-settings.txt'
+            AFD_CONFIG_DETECTED=''
 
+            if [[ $(grep "MULTISITE_CONVERSION_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_MULTISITE_TYPE ]] && [[ "$WORDPRESS_MULTISITE_TYPE" == "subdomain" ]] && [[ $CUSTOM_DOMAIN ]]; then
+                AFD_CONFIG_DETECTED=$(grep "^\s*\$_SERVER\['HTTP_HOST'\]\s*=\s*\$_SERVER\['HTTP_X_FORWARDED_HOST'\];" $WORDPRESS_HOME/wp-config.php)
+                AFD_HEADER_FILE='afd-multisite-header-settings.txt'
+                AFD_DOMAIN=''
+            else
+                AFD_CONFIG_DETECTED=$(grep "^\s*\$_SERVER\['HTTP_HOST'\]\s*=\s*getenv('AFD_DOMAIN');" $WORDPRESS_HOME/wp-config.php)
+            fi
+
+            if [ -z "$AFD_CONFIG_DETECTED" ]; then
                 SEARCH_STR_I="Using environment variables for memory limits"
                 if [ ! -z "$(grep "${SEARCH_STR_I}" $WORDPRESS_HOME/wp-config.php)" ]; then
-                    sed -i "/${SEARCH_STR_I}/e cat $WORDPRESS_SOURCE/afd-header-settings.txt" $WORDPRESS_HOME/wp-config.php
+                    sed -i "/${SEARCH_STR_I}/e cat $WORDPRESS_SOURCE/$AFD_HEADER_FILE" $WORDPRESS_HOME/wp-config.php
                 else
                     SEARCH_STR_II="Using environment variables for DB connection information"
                     if [ ! -z "$(grep "${SEARCH_STR_II}" $WORDPRESS_HOME/wp-config.php)" ]; then
-                        sed -i "/${SEARCH_STR_II}/e cat $WORDPRESS_SOURCE/afd-header-settings.txt" $WORDPRESS_HOME/wp-config.php
+                        sed -i "/${SEARCH_STR_II}/e cat $WORDPRESS_SOURCE/$AFD_HEADER_FILE" $WORDPRESS_HOME/wp-config.php
                     fi
                 fi
             fi
