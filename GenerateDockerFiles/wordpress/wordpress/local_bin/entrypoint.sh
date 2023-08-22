@@ -611,6 +611,10 @@ if [ "$IS_TEMP_SERVER_STARTED" == "True" ]; then
     temp_server_stop
 fi
 
+# Get environment variables to show up in SSH session
+# This will replace any \ (backslash), " (double quote), $ (dollar sign) and ` (back quote) symbol by its escaped character to not allow any bash substitution.
+(printenv | sed -n "s/^\([^=]\+\)=\(.*\)$/export \1=\2/p" | sed 's/\\/\\\\/g' | sed 's/"/\\\"/g' | sed 's/\$/\\\$/g' | sed 's/`/\\`/g' | sed '/=/s//="/' | sed 's/$/"/' >> /etc/profile)
+
 setup_post_startup_script
 
 cd /usr/bin/
