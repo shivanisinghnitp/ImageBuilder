@@ -14,6 +14,7 @@ ENV PHP_HOME "/usr/local/etc/php"
 ENV PHP_CONF_DIR $PHP_HOME
 ENV PHP_CONF_FILE $PHP_CONF_DIR"/php.ini"
 ENV PHP_CUSTOM_CONF_FILE $PHP_CONF_DIR"/conf.d/uploads.ini"
+ENV PHP_FPM_LOG_DIR "/var/log/php-fpm"
 #Upper bounds of php configs
 ENV UB_PHP_MEMORY_LIMIT 512M
 ENV UB_UPLOAD_MAX_FILESIZE 256M
@@ -285,6 +286,10 @@ RUN set -ex \
 	&& chown -R nginx:nginx $HOME_SITE_LOCAL_STG \
 	&& chmod -R 777 $HOME_SITE \
 	&& chmod -R 777 $HOME_SITE_LOCAL_STG \
+	# create php-fpm log directory
+	&& mkdir -p ${PHP_FPM_LOG_DIR} \
+	&& chown -R nginx:nginx $PHP_FPM_LOG_DIR \
+	&& chmod -R 777 $PHP_FPM_LOG_DIR \
 # -------------
 # log rotate & supervisor
 # -------------
