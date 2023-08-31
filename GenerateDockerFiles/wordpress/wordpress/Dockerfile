@@ -296,9 +296,6 @@ RUN set -ex \
 # phpmyadmin
 # -------------
     && mkdir -p $PHPMYADMIN_SOURCE \
-	&& mkdir -p /home/site/php/tmp \
-	&& chmod 777 /home/site/php/tmp \
-# ----------
 # ~. upgrade/clean up
 # ----------
 	&& apk upgrade \
