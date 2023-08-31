@@ -160,3 +160,9 @@ $cfg['SaveDir'] = '';
  * You can find more configuration options in the documentation
  * in the doc/ folder or at <https://docs.phpmyadmin.net/>.
  */
+
+ini_set('session.save_path', 'tcp://localhost:6379?timeout=2');
+session_start();
+$cfg['SessionSaveHandler'] = 'redis';
+$cfg['SessionSavePath'] = 'tcp://localhost:6379';
+session_write_close();
