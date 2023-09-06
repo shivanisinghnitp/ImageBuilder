@@ -364,8 +364,10 @@ RUN set -ex \
 	&& apk add --no-cache --virtual .build-deps \
 		libjpeg-turbo-dev \
 		libpng-dev \
-                libzip-dev \	
+		libwebp-dev \
+		libzip-dev \
 	&& docker-php-ext-configure gd --with-jpeg \
+	&& docker-php-ext-configure gd --with-webp \
 	&& docker-php-ext-install gd zip redis \
 	&& runDeps="$( \
 		scanelf --needed --nobanner --format '%n#p' --recursive /usr/local/lib/php/extensions \
