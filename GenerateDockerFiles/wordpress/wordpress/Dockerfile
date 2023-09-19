@@ -25,6 +25,7 @@ ENV UB_MAX_INPUT_VARS 10000
 # phpmyadmin
 ENV PHPMYADMIN_SOURCE "/usr/src/phpmyadmin"
 ENV PHPMYADMIN_HOME "/home/phpmyadmin"
+ENV PHPMYADMIN_SESSION "/var/lib/php/sessions"
 # redis
 ENV PHPREDIS_VERSION 5.3.4
 #Web Site Home
@@ -116,6 +117,9 @@ RUN set -ex \
 	&& apk add --virtual .drupal-phpexts-rundeps $runDeps \
 	&& apk del .build-dependencies \	
 	&& docker-php-source delete \
+	&& mkdir -p ${PHPMYADMIN_SESSION} \
+	&& chown -R nginx:nginx $PHPMYADMIN_SESSION \
+	&& chmod 777 $PHPMYADMIN_SESSION \
 	&& mkdir -p /usr/local/php/tmp \
 	&& chmod 777 /usr/local/php/tmp \
 	&& apk add --no-cache sed \
