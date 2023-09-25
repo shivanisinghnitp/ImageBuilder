@@ -555,6 +555,10 @@ UNISON_EXCLUDED_PATH="wp-content/uploads"
 IS_LOCAL_STORAGE_OPTIMIZATION_POSSIBLE="False"
 
 if [[ $(grep "FIRST_TIME_SETUP_COMPLETED" $WORDPRESS_LOCK_FILE) ]] && [[ $WORDPRESS_LOCAL_STORAGE_CACHE_ENABLED ]] && [[ "$WORDPRESS_LOCAL_STORAGE_CACHE_ENABLED" == "1" || "$WORDPRESS_LOCAL_STORAGE_CACHE_ENABLED" == "true" || "$WORDPRESS_LOCAL_STORAGE_CACHE_ENABLED" == "TRUE" || "$WEBSITE_LOCAL_STORAGE_CACHE_ENABLED" == "True" ]]; then
+    if [[ "$WEBSITE_SKU" == "LinuxFree" ]]; then
+        MAXIMUM_LOCAL_STORAGE_SIZE_BYTES=$MAXIMUM_LOCAL_STORAGE_SIZE_BYTES_FREESKU
+    fi
+
     CURRENT_WP_SIZE="`du -sb --apparent-size $WORDPRESS_HOME/ --exclude="wp-content/uploads" | cut -f1`"
     if [ "$CURRENT_WP_SIZE" -lt "$MAXIMUM_LOCAL_STORAGE_SIZE_BYTES" ]; then
         IS_LOCAL_STORAGE_OPTIMIZATION_POSSIBLE="True"
@@ -610,6 +614,10 @@ sed -i "s#WORDPRESS_HOME#${WORDPRESS_HOME}#g" /etc/nginx/conf.d/default.conf
 if [ "$IS_TEMP_SERVER_STARTED" == "True" ]; then
     temp_server_stop
 fi
+
+# Get environment variables to show up in SSH session
+# This will replace any \ (backslash), " (double quote), $ (dollar sign) and ` (back quote) symbol by its escaped character to not allow any bash substitution.
+(printenv | sed -n "s/^\([^=]\+\)=\(.*\)$/export \1=\2/p" | sed 's/\\/\\\\/g' | sed 's/"/\\\"/g' | sed 's/\$/\\\$/g' | sed 's/`/\\`/g' | sed '/=/s//="/' | sed 's/$/"/' >> /etc/profile)
 
 setup_post_startup_script
 

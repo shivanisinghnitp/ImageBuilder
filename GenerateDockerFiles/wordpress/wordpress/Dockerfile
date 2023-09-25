@@ -14,6 +14,7 @@ ENV PHP_HOME "/usr/local/etc/php"
 ENV PHP_CONF_DIR $PHP_HOME
 ENV PHP_CONF_FILE $PHP_CONF_DIR"/php.ini"
 ENV PHP_CUSTOM_CONF_FILE $PHP_CONF_DIR"/conf.d/uploads.ini"
+ENV PHP_FPM_LOG_DIR "/var/log/php-fpm"
 #Upper bounds of php configs
 ENV UB_PHP_MEMORY_LIMIT 512M
 ENV UB_UPLOAD_MAX_FILESIZE 256M
@@ -31,6 +32,7 @@ ENV HOME_SITE "/home/site/wwwroot"
 ENV HOME_SITE_LOCAL_STG "/var/www/wordpress"
 #Maximum local storage of 10GB
 ENV MAXIMUM_LOCAL_STORAGE_SIZE_BYTES 10737418240
+ENV MAXIMUM_LOCAL_STORAGE_SIZE_BYTES_FREESKU 536870912
 # supervisor
 ENV SUPERVISOR_LOG_DIR "/var/log/supervisor"
 # wordpress
@@ -285,6 +287,10 @@ RUN set -ex \
 	&& chown -R nginx:nginx $HOME_SITE_LOCAL_STG \
 	&& chmod -R 777 $HOME_SITE \
 	&& chmod -R 777 $HOME_SITE_LOCAL_STG \
+	# create php-fpm log directory
+	&& mkdir -p ${PHP_FPM_LOG_DIR} \
+	&& chown -R nginx:nginx $PHP_FPM_LOG_DIR \
+	&& chmod -R 777 $PHP_FPM_LOG_DIR \
 # -------------
 # log rotate & supervisor
 # -------------
@@ -357,8 +363,9 @@ RUN set -ex \
 	&& apk add --no-cache --virtual .build-deps \
 		libjpeg-turbo-dev \
 		libpng-dev \
-                libzip-dev \	
-	&& docker-php-ext-configure gd --with-jpeg \
+		libwebp-dev \
+		libzip-dev \
+	&& docker-php-ext-configure gd --with-jpeg --with-webp \
 	&& docker-php-ext-install gd zip redis \
 	&& runDeps="$( \
 		scanelf --needed --nobanner --format '%n#p' --recursive /usr/local/lib/php/extensions \
